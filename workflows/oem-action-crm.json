@@ -1,0 +1,108 @@
+{
+  "name": "oem-action-crm",
+  "nodes": [
+    {
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "tenant_config",
+              "type": "object"
+            },
+            {
+              "name": "event_type"
+            },
+            {
+              "name": "payload",
+              "type": "object"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        -224,
+        -112
+      ],
+      "id": "93bd9b1d-8c8b-4e6d-8f54-33049182e3fc",
+      "name": "Receive from Main"
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $input.first().json;\nconst event = data.event_type;\nconst crmConfig = data.tenant_config.crm;\nconst payload = data.payload;\n\n// Map event types to CRM record types\nconst recordTypeMap = {\n  trial_signup: \"Lead\",\n  upgrade: \"Opportunity\",\n  churn_signal: \"Case\"\n};\n\nconst recordType = crmConfig.record_type || recordTypeMap[event] || \"Lead\";\n\nconst crmRecord = {\n  record_type: recordType,\n  event_type: event,\n  contact_email: payload.customer_email,\n  tenant_id: data.tenant_config.tenant_id,\n  properties: {\n    source: \"oem-platform\",\n    event_timestamp: new Date().toISOString(),\n    ...payload\n  }\n};\n\nif (!crmRecord.contact_email) {\n  throw new Error(`No contact email in payload for CRM record on tenant: ${data.tenant_config.tenant_id}`);\n}\n\nreturn [{\n  json: {\n    ...data,\n    crm_record: crmRecord\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -16,
+        -112
+      ],
+      "id": "9b7f442a-eda9-4459-803d-9c26de797b7d",
+      "name": "Build CRM Record"
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $input.first().json;\n\n// Stub — replace with native n8n node based on company's CRM provider:\n// Salesforce, HubSpot, Pipedrive, Zoho CRM\n// Credentials configured at platform level — not tenant level\n// Map: data.crm_record → provider's required field schema\n\nconsole.log(\"CRM record written:\", data.crm_record);\n\nreturn [{\n  json: {\n    ...data,\n    crm_result: {\n      skipped: false,\n      success: true,\n      simulated: true,\n      tenant_id: data.tenant_config.tenant_id,\n      record_type: data.crm_record.record_type,\n      contact_email: data.crm_record.contact_email,\n      event_type: data.crm_record.event_type\n    }\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        192,
+        -112
+      ],
+      "id": "45aa9773-88e7-4c8b-97b3-a166eea410fc",
+      "name": "Write CRM Record"
+    },
+    {
+      "parameters": {
+        "content": "## Placeholder Node\nStub simulating CRM write. Replace with a native n8n node based on the platform's CRM provider: Salesforce, HubSpot, Pipedrive, Zoho CRM.",
+        "height": 368
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        128,
+        -288
+      ],
+      "typeVersion": 1,
+      "id": "a89604f2-d6d2-4e16-a523-b03ce99b0496",
+      "name": "Sticky Note"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Receive from Main": {
+      "main": [
+        [
+          {
+            "node": "Build CRM Record",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build CRM Record": {
+      "main": [
+        [
+          {
+            "node": "Write CRM Record",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": false
+  },
+  "versionId": "8bf5e4f3-5e09-402b-93a9-1d52d601867b",
+  "meta": {
+    "instanceId": "962a59ff95176050f9f591a7c2ac89974c0465bcc126735b72f2c213fa955d44"
+  },
+  "id": "pE8H7TlNUfkCxD1L",
+  "tags": []
+}

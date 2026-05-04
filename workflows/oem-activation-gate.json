@@ -1,0 +1,139 @@
+{
+  "name": "oem-activation-gate",
+  "nodes": [
+    {
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "tenant_config",
+              "type": "object"
+            },
+            {
+              "name": "service"
+            },
+            {
+              "name": "event_type"
+            },
+            {
+              "name": "payload",
+              "type": "object"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        -160,
+        -64
+      ],
+      "id": "661fd602-b5e5-475a-a229-cf8628d94451",
+      "name": "Receive from Main"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "a53084b1-6382-4427-8e6b-bb66c5e742ee",
+              "leftValue": "={{ $json.tenant_config[$json.service].enabled }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        16,
+        -64
+      ],
+      "id": "8127454b-7a67-4ac0-9ced-051d6e5bd46d",
+      "name": "If",
+      "notesInFlow": false
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{\n  json: {\n    ...$input.first().json,\n    active: true\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        192,
+        -192
+      ],
+      "id": "432ccbbb-c364-4212-9484-8629df9311cb",
+      "name": "Active"
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{\n  json: {\n    ...$input.first().json,\n    active: false,\n    reason: `Service '${$input.first().json.service}' not enabled for tenant: ${$input.first().json.tenant_config.tenant_id}`\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        192,
+        48
+      ],
+      "id": "b2a24b7f-2e6a-4a60-be23-d8ba53a72477",
+      "name": "Inactive"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Receive from Main": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Active",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Inactive",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": false
+  },
+  "versionId": "0fafb4a9-6467-4489-bef2-b5fbff8559d5",
+  "meta": {
+    "instanceId": "962a59ff95176050f9f591a7c2ac89974c0465bcc126735b72f2c213fa955d44"
+  },
+  "id": "XQIXeXjW0hz3Qf7y",
+  "tags": []
+}

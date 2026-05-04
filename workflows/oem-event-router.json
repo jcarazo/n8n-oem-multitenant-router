@@ -1,0 +1,777 @@
+{
+  "name": "MultiTenant",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "oem-event-router",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -736,
+        -320
+      ],
+      "id": "9ed49cce-f093-411c-bfa1-a4e588cf0d7a",
+      "name": "Webhook",
+      "webhookId": "8798e099-4e59-41cf-8efd-ee5d279e0023"
+    },
+    {
+      "parameters": {
+        "jsCode": "const tenantId = $input.first().json.body.tenant_id;\nconst eventType = $input.first().json.body.event_type;\nconst payload = $input.first().json.body.payload;\n\nconst configs = {\n  tenant_a: {\n    tenant_id: \"tenant_a\",\n    name: \"E-commerce SMB\",\n    error_mode: \"continue\",\n    data_handling: \"standard\",\n    email: {\n      enabled: true,\n      from_name: \"TenantA Store\",\n      templates: {\n        cart_abandoned: \"tmpl_001\",\n        new_order: \"tmpl_002\",\n        refund_requested: \"tmpl_003\"\n      }\n    },\n    sheet_log: {\n      enabled: true,\n      sheet_id: \"sheet_tenant_a\"\n    },\n    slack: {\n      enabled: false\n    },\n    crm: {\n      enabled: false\n    },\n    audit: {\n      enabled: false\n    }\n  },\n  tenant_b: {\n    tenant_id: \"tenant_b\",\n    name: \"B2B SaaS\",\n    error_mode: \"block\",\n    data_handling: \"standard\",\n    email: {\n      enabled: true,\n      from_name: \"TenantB\",\n      templates: {\n        trial_signup: \"tmpl_010\",\n        upgrade: \"tmpl_011\",\n        churn_signal: \"tmpl_012\"\n      }\n    },\n    sheet_log: {\n      enabled: false\n    },\n    slack: {\n      enabled: true,\n      channel: \"#new-trials\"\n    },\n    crm: {\n      enabled: true,\n      record_type: \"Lead\"\n    },\n    audit: {\n      enabled: false\n    }\n  },\n  tenant_c: {\n    tenant_id: \"tenant_c\",\n    name: \"Healthcare Provider\",\n    error_mode: \"block\",\n    data_handling: \"pii_masked\",\n    email: {\n      enabled: true,\n      from_name: \"HealthcareCo\",\n      templates: {\n        appointment_reminder: \"tmpl_020\",\n        intake_completed: \"tmpl_021\"\n      }\n    },\n    sheet_log: {\n      enabled: false\n    },\n    slack: {\n      enabled: false\n    },\n    crm: {\n      enabled: false\n    },\n    audit: {\n      enabled: true\n    }\n  }\n};\n\nconst config = configs[tenantId];\n\nif (!config) {\n  throw new Error(`Unknown tenant_id: ${tenantId}`);\n}\n\nreturn [{\n  json: {\n    tenant_config: config,\n    event_type: eventType,\n    payload: payload\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -240,
+        -112
+      ],
+      "id": "1bb4e662-9249-4994-9f80-62984d8227b1",
+      "name": "Tenant Config Lookup"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.tenant_config.data_handling }}",
+                    "rightValue": "pii_masked",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "f34df07a-3896-47b9-b71c-4e3b29519c8f"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "f4472076-237c-4c20-8fd0-d59a93311038",
+                    "leftValue": "={{ $json.tenant_config.data_handling }}",
+                    "rightValue": "pii_masked",
+                    "operator": {
+                      "type": "string",
+                      "operation": "notEquals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        -32,
+        -112
+      ],
+      "id": "391dabe8-ed41-4aaa-9592-d000399e6786",
+      "name": "Requires PII Masking?"
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $input.first().json;\nconst payload = { ...data.payload };\n\n// Fields considered PII\nconst piiFields = [\"customer_email\", \"patient_name\", \"dob\", \"phone\", \"address\"];\n\nfor (const field of piiFields) {\n  if (payload[field]) {\n    payload[field] = \"***MASKED***\";\n  }\n}\n\nreturn [{\n  json: {\n    ...data,\n    payload: payload,\n    pii_masked: true\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        160,
+        -208
+      ],
+      "id": "338615de-019c-434e-9cb0-b12043b1d9fc",
+      "name": "PII Masker"
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{\n  json: {\n    ...$input.first().json,\n    pii_masked: false\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        160,
+        -16
+      ],
+      "id": "d55fba80-1ae7-4cac-9393-1a23d595b36e",
+      "name": "Pass Through"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        368,
+        -112
+      ],
+      "id": "7b4e9d32-9f18-40b5-8481-8e4540d245b4",
+      "name": "PII Merge"
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "XQIXeXjW0hz3Qf7y",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/XQIXeXjW0hz3Qf7y",
+          "cachedResultName": "oem-activation-gate"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "tenant_config": "={{ $json.tenant_config }}",
+            "service": "email",
+            "payload": "={{ $json.payload }}",
+            "event_type": "={{ $json.event_type }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "tenant_config",
+              "displayName": "tenant_config",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "object",
+              "removed": false
+            },
+            {
+              "id": "service",
+              "displayName": "service",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "event_type",
+              "displayName": "event_type",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "payload",
+              "displayName": "payload",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "object",
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.3,
+      "position": [
+        544,
+        -112
+      ],
+      "id": "8c1da926-b183-45ab-be8a-b4bead0230a4",
+      "name": "Gate: Email"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -720,
+        -112
+      ],
+      "id": "1d855e39-6907-43c2-9d00-7a16165be398",
+      "name": "When clicking ‘Execute workflow’"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "872a7231-e29d-4f91-8322-87adf2de3108",
+              "leftValue": "={{ $json.active }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        704,
+        -112
+      ],
+      "id": "e87fd0b6-c9c4-4e8e-958c-9c980cb84ea2",
+      "name": "Email Active?"
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{\n  json: {\n    ...$input.first().json,\n    email_result: {\n      skipped: true,\n      reason: `Email not enabled for tenant: ${$input.first().json.tenant_config.tenant_id}`\n    }\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        912,
+        32
+      ],
+      "id": "1d1a6abe-c2ed-405f-ad3b-e8f0eb19aefa",
+      "name": "Skip Email"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        1152,
+        -112
+      ],
+      "id": "b3c1dc5c-216a-4fa1-821b-3beb0cd19fe4",
+      "name": "Email Merge"
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "ohqKSIC1aGGMO3Uu",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/ohqKSIC1aGGMO3Uu",
+          "cachedResultName": "oem-action-email"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "tenant_config": "={{ $json.tenant_config }}",
+            "event_type": "={{ $json.event_type }}",
+            "payload": "={{ $json.payload }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "tenant_config",
+              "displayName": "tenant_config",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "object",
+              "removed": false
+            },
+            {
+              "id": "event_type",
+              "displayName": "event_type",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "payload",
+              "displayName": "payload",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "object",
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.3,
+      "position": [
+        912,
+        -208
+      ],
+      "id": "1ba0ff81-df74-4ca7-966b-4e98348a8b7b",
+      "name": "Call 'oem-action-email'"
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "XQIXeXjW0hz3Qf7y",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/XQIXeXjW0hz3Qf7y",
+          "cachedResultName": "oem-activation-gate"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "tenant_config": "={{ $json.tenant_config }}",
+            "service": "crm",
+            "payload": "={{ $json.payload }}",
+            "event_type": "={{ $json.event_type }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "tenant_config",
+              "displayName": "tenant_config",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "object",
+              "removed": false
+            },
+            {
+              "id": "service",
+              "displayName": "service",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "event_type",
+              "displayName": "event_type",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "payload",
+              "displayName": "payload",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "object",
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.3,
+      "position": [
+        1424,
+        -112
+      ],
+      "id": "2efd5879-437b-406c-85d4-d4683f4822b8",
+      "name": "Gate: CRM"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "872a7231-e29d-4f91-8322-87adf2de3108",
+              "leftValue": "={{ $json.active }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1600,
+        -112
+      ],
+      "id": "a4c54ff6-70b1-46ec-8caa-f878a1c1466f",
+      "name": "CRM Active?"
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{\n  json: {\n    ...$input.first().json,\n    email_result: {\n      skipped: true,\n      reason: `CRM not enabled for tenant: ${$input.first().json.tenant_config.tenant_id}`\n    }\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1808,
+        32
+      ],
+      "id": "dec3e738-2f5b-4740-8a22-c2190cf5f8be",
+      "name": "Skip CRM"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        2048,
+        -112
+      ],
+      "id": "28fadebe-0c1b-404d-9b4c-dac643cae65d",
+      "name": "CRM Merge"
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "pE8H7TlNUfkCxD1L",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/pE8H7TlNUfkCxD1L",
+          "cachedResultName": "oem-action-crm"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "tenant_config": "={{ $json.tenant_config }}",
+            "event_type": "={{ $json.event_type }}",
+            "payload": "={{ $json.payload }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "tenant_config",
+              "displayName": "tenant_config",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "object",
+              "removed": false
+            },
+            {
+              "id": "event_type",
+              "displayName": "event_type",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "payload",
+              "displayName": "payload",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "object",
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.3,
+      "position": [
+        1808,
+        -208
+      ],
+      "id": "b0f42168-12ac-42b8-849d-4312c89ffe4f",
+      "name": "Call 'oem-action-crm'"
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{\n  json: {\n    body: {\n      tenant_id: \"tenant_b\",\n      event_type: \"trial_signup\",\n      payload: {\n        customer_email: \"john.doe@example.com\",\n        company: \"Acme Corp\",\n        plan: \"trial\"\n      }\n    }\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -496,
+        -112
+      ],
+      "id": "67442783-330f-4a4f-a301-6bada60a0107",
+      "name": "Mock Payload"
+    },
+    {
+      "parameters": {
+        "content": "## MOCK PAYLOADS\nCopy into Mock Payload Code node\n\n──────────────────────────────────\nTENANT A — E-commerce SMB\n──────────────────────────────────\nCart Abandoned:\n{ body: { tenant_id: \"tenant_a\", event_type: \"cart_abandoned\",\npayload: { customer_email: \"anna@shop.com\", cart_value: 89.99 }}}\n\nNew Order:\n{ body: { tenant_id: \"tenant_a\", event_type: \"new_order\",\npayload: { customer_email: \"anna@shop.com\", cart_value: 120.00 }}}\n\nRefund Requested:\n{ body: { tenant_id: \"tenant_a\", event_type: \"refund_requested\",\npayload: { customer_email: \"anna@shop.com\", cart_value: 45.00 }}}\n\n──────────────────────────────────\nTENANT B — B2B SaaS\n──────────────────────────────────\nTrial Signup:\n{ body: { tenant_id: \"tenant_b\", event_type: \"trial_signup\",\npayload: { customer_email: \"john@acme.com\", company: \"Acme Corp\", plan: \"trial\" }}}\n\nUpgrade:\n{ body: { tenant_id: \"tenant_b\", event_type: \"upgrade\",\npayload: { customer_email: \"john@acme.com\", company: \"Acme Corp\", plan: \"pro\" }}}\n\nChurn Signal:\n{ body: { tenant_id: \"tenant_b\", event_type: \"churn_signal\",\npayload: { customer_email: \"john@acme.com\", company: \"Acme Corp\", usage_drop: \"78%\" }}}\n\n──────────────────────────────────\nTENANT C — Healthcare Provider\n──────────────────────────────────\nAppointment Reminder:\n{ body: { tenant_id: \"tenant_c\", event_type: \"appointment_reminder\",\npayload: { customer_email: \"patient@clinic.com\", patient_name: \"Jane Smith\", dob: \"1985-03-22\" }}}\n\nIntake Completed:\n{ body: { tenant_id: \"tenant_c\", event_type: \"intake_completed\",\npayload: { customer_email: \"patient@clinic.com\", patient_name: \"Jane Smith\", phone: \"555-0100\" }}}",
+        "height": 880,
+        "width": 768
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -736,
+        128
+      ],
+      "typeVersion": 1,
+      "id": "323707a9-e7ca-4864-8d4e-f5692d68c0f5",
+      "name": "Sticky Note"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        []
+      ]
+    },
+    "Tenant Config Lookup": {
+      "main": [
+        [
+          {
+            "node": "Requires PII Masking?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Requires PII Masking?": {
+      "main": [
+        [
+          {
+            "node": "PII Masker",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Pass Through",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "PII Masker": {
+      "main": [
+        [
+          {
+            "node": "PII Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Pass Through": {
+      "main": [
+        [
+          {
+            "node": "PII Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "PII Merge": {
+      "main": [
+        [
+          {
+            "node": "Gate: Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "When clicking ‘Execute workflow’": {
+      "main": [
+        [
+          {
+            "node": "Mock Payload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gate: Email": {
+      "main": [
+        [
+          {
+            "node": "Email Active?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Email Active?": {
+      "main": [
+        [
+          {
+            "node": "Call 'oem-action-email'",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Skip Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Skip Email": {
+      "main": [
+        [
+          {
+            "node": "Email Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Call 'oem-action-email'": {
+      "main": [
+        [
+          {
+            "node": "Email Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Email Merge": {
+      "main": [
+        [
+          {
+            "node": "Gate: CRM",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gate: CRM": {
+      "main": [
+        [
+          {
+            "node": "CRM Active?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CRM Active?": {
+      "main": [
+        [
+          {
+            "node": "Call 'oem-action-crm'",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Skip CRM",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Skip CRM": {
+      "main": [
+        [
+          {
+            "node": "CRM Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Call 'oem-action-crm'": {
+      "main": [
+        [
+          {
+            "node": "CRM Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mock Payload": {
+      "main": [
+        [
+          {
+            "node": "Tenant Config Lookup",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": false
+  },
+  "versionId": "2e45633c-ec4a-443e-aa6c-13f4b5f954b9",
+  "meta": {
+    "instanceId": "962a59ff95176050f9f591a7c2ac89974c0465bcc126735b72f2c213fa955d44"
+  },
+  "id": "waExy2v9sgZADwjh",
+  "tags": []
+}

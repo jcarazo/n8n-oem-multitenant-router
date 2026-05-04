@@ -1,0 +1,113 @@
+{
+  "name": "oem-action-email",
+  "nodes": [
+    {
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "tenant_config",
+              "type": "object"
+            },
+            {
+              "name": "event_type"
+            },
+            {
+              "name": "payload",
+              "type": "object"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        -176,
+        -96
+      ],
+      "id": "2917bfd0-77bf-48ed-ba08-cc82f9ab9088",
+      "name": "Receive from Main"
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $input.first().json;\nconst event = data.event_type;\nconst emailConfig = data.tenant_config.email;\n\nconst templateId = emailConfig.templates[event] || null;\n\nif (!templateId) {\n  throw new Error(`No template mapped for event '${event}' on tenant: ${data.tenant_config.tenant_id}`);\n}\n\nreturn [{\n  json: {\n    ...data,\n    email_payload: {\n      from_name: emailConfig.from_name,\n      recipient: data.payload.customer_email,\n      template_id: templateId,\n      event_type: event\n    }\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        16,
+        -96
+      ],
+      "id": "ed869be7-62f2-44e3-8c35-bb76f1bb2ced",
+      "name": "Map Template"
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $input.first().json;\n\n// In production: replace with HTTP Request node\n// POST to company's email provider endpoint\n// Authorization handled at platform level — not tenant level\n// Body: data.email_payload\n\nconsole.log(\"Email dispatched:\", data.email_payload);\n\nreturn [{\n  json: {\n    ...data,\n    email_result: {\n      skipped: false,\n      success: true,\n      simulated: true,\n      tenant_id: data.tenant_config.tenant_id,\n      template_id: data.email_payload.template_id,\n      recipient: data.email_payload.recipient,\n      event_type: data.email_payload.event_type\n    }\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        224,
+        -96
+      ],
+      "id": "067ffbec-8352-4af3-ae24-cb25be0f3c6d",
+      "name": "Send Email"
+    },
+    {
+      "parameters": {
+        "content": "## Placeholder Node\nThis is a stub simulating email dispatch. Replace with a native n8n node based on the platform's email provider: Gmail, SendGrid, Send Email (SMTP), or Mailchimp.",
+        "height": 384
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        160,
+        -272
+      ],
+      "typeVersion": 1,
+      "id": "704012b1-7c6c-47bb-ac6d-6a426fba0187",
+      "name": "Sticky Note"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Receive from Main": {
+      "main": [
+        [
+          {
+            "node": "Map Template",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Map Template": {
+      "main": [
+        [
+          {
+            "node": "Send Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Email": {
+      "main": [
+        []
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": false
+  },
+  "versionId": "3a981745-1b1a-4817-bc34-f77e7f125a86",
+  "meta": {
+    "instanceId": "962a59ff95176050f9f591a7c2ac89974c0465bcc126735b72f2c213fa955d44"
+  },
+  "id": "ohqKSIC1aGGMO3Uu",
+  "tags": []
+}
