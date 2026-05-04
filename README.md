@@ -36,6 +36,23 @@ in the main workflow. Tenant configs live in one place.
 
 ---
 
+## v2 — Optimized Architecture (branch: v2-loop-orchestrator)
+
+After implementing the service chain pattern, a clear scaling problem emerges: 
+each new service adds 5 nodes to the main workflow. At scale this becomes 
+unmaintainable.
+
+v2 refactors to a loop-based orchestration pattern:
+- A single array defines all active services
+- A Loop Over Items node iterates over them
+- A central orchestrator sub-workflow handles gate + dispatch per service
+- Main workflow structure never changes when adding new services
+
+The deliberate decision to show both versions reflects how real platform 
+architecture evolves — working first, then optimized for scale.
+
+---
+
 ## Workflows
 
 | File | Purpose |
