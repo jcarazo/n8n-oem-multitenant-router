@@ -1,0 +1,427 @@
+{
+  "name": "oem-event-router-v2",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "97e2ffda-98f6-4129-927a-0957ee0bedcc",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -736,
+        -320
+      ],
+      "id": "2b74d0f1-2725-4698-a1dc-8388b0e91b90",
+      "name": "Webhook",
+      "webhookId": "97e2ffda-98f6-4129-927a-0957ee0bedcc"
+    },
+    {
+      "parameters": {
+        "jsCode": "const tenantId = $input.first().json.body.tenant_id;\nconst eventType = $input.first().json.body.event_type;\nconst payload = $input.first().json.body.payload;\n\nconst configs = {\n  tenant_a: {\n    tenant_id: \"tenant_a\",\n    name: \"E-commerce SMB\",\n    error_mode: \"continue\",\n    data_handling: \"standard\",\n    email: {\n      enabled: true,\n      from_name: \"TenantA Store\",\n      templates: {\n        cart_abandoned: \"tmpl_001\",\n        new_order: \"tmpl_002\",\n        refund_requested: \"tmpl_003\"\n      }\n    },\n    sheet_log: {\n      enabled: true,\n      sheet_id: \"sheet_tenant_a\"\n    },\n    slack: {\n      enabled: false\n    },\n    crm: {\n      enabled: false\n    },\n    audit: {\n      enabled: false\n    }\n  },\n  tenant_b: {\n    tenant_id: \"tenant_b\",\n    name: \"B2B SaaS\",\n    error_mode: \"block\",\n    data_handling: \"standard\",\n    email: {\n      enabled: true,\n      from_name: \"TenantB\",\n      templates: {\n        trial_signup: \"tmpl_010\",\n        upgrade: \"tmpl_011\",\n        churn_signal: \"tmpl_012\"\n      }\n    },\n    sheet_log: {\n      enabled: false\n    },\n    slack: {\n      enabled: true,\n      channel: \"#new-trials\"\n    },\n    crm: {\n      enabled: true,\n      record_type: \"Lead\"\n    },\n    audit: {\n      enabled: false\n    }\n  },\n  tenant_c: {\n    tenant_id: \"tenant_c\",\n    name: \"Healthcare Provider\",\n    error_mode: \"block\",\n    data_handling: \"pii_masked\",\n    email: {\n      enabled: true,\n      from_name: \"HealthcareCo\",\n      templates: {\n        appointment_reminder: \"tmpl_020\",\n        intake_completed: \"tmpl_021\"\n      }\n    },\n    sheet_log: {\n      enabled: false\n    },\n    slack: {\n      enabled: false\n    },\n    crm: {\n      enabled: false\n    },\n    audit: {\n      enabled: true\n    }\n  }\n};\n\nconst config = configs[tenantId];\n\nif (!config) {\n  throw new Error(`Unknown tenant_id: ${tenantId}`);\n}\n\nreturn [{\n  json: {\n    tenant_config: config,\n    event_type: eventType,\n    payload: payload\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -240,
+        -112
+      ],
+      "id": "31b11739-ec30-4ac1-9d96-a0b682e286ff",
+      "name": "Tenant Config Lookup"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.tenant_config.data_handling }}",
+                    "rightValue": "pii_masked",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "f34df07a-3896-47b9-b71c-4e3b29519c8f"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "f4472076-237c-4c20-8fd0-d59a93311038",
+                    "leftValue": "={{ $json.tenant_config.data_handling }}",
+                    "rightValue": "pii_masked",
+                    "operator": {
+                      "type": "string",
+                      "operation": "notEquals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        -32,
+        -112
+      ],
+      "id": "85210c6f-b733-4d14-84bc-64529e37baaf",
+      "name": "Requires PII Masking?"
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $input.first().json;\nconst payload = { ...data.payload };\n\n// Fields considered PII\nconst piiFields = [\"customer_email\", \"patient_name\", \"dob\", \"phone\", \"address\"];\n\nfor (const field of piiFields) {\n  if (payload[field]) {\n    payload[field] = \"***MASKED***\";\n  }\n}\n\nreturn [{\n  json: {\n    ...data,\n    payload: payload,\n    pii_masked: true\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        160,
+        -208
+      ],
+      "id": "605986c5-73e3-458f-8c3d-67e870c96b13",
+      "name": "PII Masker"
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{\n  json: {\n    ...$input.first().json,\n    pii_masked: false\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        160,
+        -16
+      ],
+      "id": "377d748d-949a-4743-a117-223572f94f72",
+      "name": "Pass Through"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        368,
+        -112
+      ],
+      "id": "447337dd-b41c-4853-a756-e98b4160e3b6",
+      "name": "PII Merge"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -720,
+        -112
+      ],
+      "id": "5104e44c-5f8a-4cf8-aea6-3140fcc9d320",
+      "name": "When clicking ‘Execute workflow’"
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{\n  json: {\n    body: {\n      tenant_id: \"tenant_b\",\n      event_type: \"trial_signup\",\n      payload: {\n        customer_email: \"john@acme.com\",\n        company: \"Acme Corp\",\n        plan: \"trial\"\n      }\n    }\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -496,
+        -112
+      ],
+      "id": "15da38ff-3b68-450a-b6a0-d7afd049d7b5",
+      "name": "Mock Payload"
+    },
+    {
+      "parameters": {
+        "content": "## MOCK PAYLOADS\nCopy into Mock Payload Code node\n\n──────────────────────────────────\nTENANT A — E-commerce SMB\n──────────────────────────────────\nCart Abandoned:\n{ body: { tenant_id: \"tenant_a\", event_type: \"cart_abandoned\",\npayload: { customer_email: \"anna@shop.com\", cart_value: 89.99 }}}\n\nNew Order:\n{ body: { tenant_id: \"tenant_a\", event_type: \"new_order\",\npayload: { customer_email: \"anna@shop.com\", cart_value: 120.00 }}}\n\nRefund Requested:\n{ body: { tenant_id: \"tenant_a\", event_type: \"refund_requested\",\npayload: { customer_email: \"anna@shop.com\", cart_value: 45.00 }}}\n\n──────────────────────────────────\nTENANT B — B2B SaaS\n──────────────────────────────────\nTrial Signup:\n{ body: { tenant_id: \"tenant_b\", event_type: \"trial_signup\",\npayload: { customer_email: \"john@acme.com\", company: \"Acme Corp\", plan: \"trial\" }}}\n\nUpgrade:\n{ body: { tenant_id: \"tenant_b\", event_type: \"upgrade\",\npayload: { customer_email: \"john@acme.com\", company: \"Acme Corp\", plan: \"pro\" }}}\n\nChurn Signal:\n{ body: { tenant_id: \"tenant_b\", event_type: \"churn_signal\",\npayload: { customer_email: \"john@acme.com\", company: \"Acme Corp\", usage_drop: \"78%\" }}}\n\n──────────────────────────────────\nTENANT C — Healthcare Provider\n──────────────────────────────────\nAppointment Reminder:\n{ body: { tenant_id: \"tenant_c\", event_type: \"appointment_reminder\",\npayload: { customer_email: \"patient@clinic.com\", patient_name: \"Jane Smith\", dob: \"1985-03-22\" }}}\n\nIntake Completed:\n{ body: { tenant_id: \"tenant_c\", event_type: \"intake_completed\",\npayload: { customer_email: \"patient@clinic.com\", patient_name: \"Jane Smith\", phone: \"555-0100\" }}}",
+        "height": 880,
+        "width": 768
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -736,
+        128
+      ],
+      "typeVersion": 1,
+      "id": "472847a5-8d4b-4251-bd61-bbc66907a0dd",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $input.first().json;\n\nconst services = [\"email\", \"crm\", \"slack\", \"sheet_log\", \"audit\"];\n\nreturn services.map(service => ({\n  json: {\n    ...data,\n    service: service\n  }\n}));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        576,
+        -112
+      ],
+      "id": "b2ac8ebe-b4f8-4a8a-9161-0926158a07d1",
+      "name": "Define Services"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        784,
+        -112
+      ],
+      "id": "5eea14db-1b2b-4b7d-9b94-87913c0cbcb6",
+      "name": "Service Loop"
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "GbTnFLw9VNMZPODX",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/GbTnFLw9VNMZPODX",
+          "cachedResultName": "oem-service-orchestrator"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "tenant_config": "={{ $json.tenant_config }}",
+            "event_type": "={{ $json.event_type }}",
+            "payload": "={{ $json.payload }}",
+            "service": "={{ $json.service }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "tenant_config",
+              "displayName": "tenant_config",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "object",
+              "removed": false
+            },
+            {
+              "id": "event_type",
+              "displayName": "event_type",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "payload",
+              "displayName": "payload",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "object",
+              "removed": false
+            },
+            {
+              "id": "service",
+              "displayName": "service",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.3,
+      "position": [
+        1104,
+        -96
+      ],
+      "id": "fc947e29-fcce-44c3-a9c6-a9da92c18ad3",
+      "name": "Run: Orchestrator"
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\n\nconst results = {};\n\nfor (const item of items) {\n  const data = item.json;\n  // Check all keys ending in _result\n  for (const key of Object.keys(data)) {\n    if (key.endsWith('_result')) {\n      results[key] = data[key];\n    }\n  }\n}\n\nconst firstItem = items[0].json;\n\nreturn [{\n  json: {\n    tenant_id: firstItem.tenant_config?.tenant_id || \"unknown\",\n    event_type: firstItem.event_type || \"unknown\",\n    execution_summary: results\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1104,
+        -256
+      ],
+      "id": "2cc6ab1b-0e21-4011-a2c4-2e16c16aa2f1",
+      "name": "Collect Results"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        []
+      ]
+    },
+    "Tenant Config Lookup": {
+      "main": [
+        [
+          {
+            "node": "Requires PII Masking?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Requires PII Masking?": {
+      "main": [
+        [
+          {
+            "node": "PII Masker",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Pass Through",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "PII Masker": {
+      "main": [
+        [
+          {
+            "node": "PII Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Pass Through": {
+      "main": [
+        [
+          {
+            "node": "PII Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "PII Merge": {
+      "main": [
+        [
+          {
+            "node": "Define Services",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "When clicking ‘Execute workflow’": {
+      "main": [
+        [
+          {
+            "node": "Mock Payload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mock Payload": {
+      "main": [
+        [
+          {
+            "node": "Tenant Config Lookup",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Define Services": {
+      "main": [
+        [
+          {
+            "node": "Service Loop",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Service Loop": {
+      "main": [
+        [
+          {
+            "node": "Collect Results",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Run: Orchestrator",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Run: Orchestrator": {
+      "main": [
+        [
+          {
+            "node": "Service Loop",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": false
+  },
+  "versionId": "19dca389-4737-4fa6-b2a0-dcf563d035d7",
+  "meta": {
+    "instanceId": "962a59ff95176050f9f591a7c2ac89974c0465bcc126735b72f2c213fa955d44"
+  },
+  "id": "Oal0Jg9ftYwvGxUO",
+  "tags": []
+}
