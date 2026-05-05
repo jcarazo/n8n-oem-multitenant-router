@@ -1,0 +1,68 @@
+{
+  "name": "oem-action-pii-masker",
+  "nodes": [
+    {
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "tenant_config",
+              "type": "object"
+            },
+            {
+              "name": "payload",
+              "type": "object"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "19e29feb-f704-4c85-8ce9-3626ed2aa625",
+      "name": "Receive from Agent"
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $input.first().json;\nconst payload = { ...data.payload };\n\nconst piiFields = [\"customer_email\", \"patient_name\", \"dob\", \"phone\", \"address\"];\n\nfor (const field of piiFields) {\n  if (payload[field]) {\n    payload[field] = \"***MASKED***\";\n  }\n}\n\nreturn [{\n  json: {\n    ...data,\n    payload: payload,\n    pii_masked: true\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        208,
+        0
+      ],
+      "id": "0bb63ae6-c5f9-4665-aeac-eb677a662f7e",
+      "name": "Mask PII"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Receive from Agent": {
+      "main": [
+        [
+          {
+            "node": "Mask PII",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "4ae1b150-48fa-4b5b-8eed-258022ca42d4",
+  "meta": {
+    "instanceId": "962a59ff95176050f9f591a7c2ac89974c0465bcc126735b72f2c213fa955d44"
+  },
+  "id": "QOvajTHHHhlzy7Oi",
+  "tags": []
+}

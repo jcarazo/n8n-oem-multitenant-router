@@ -1,0 +1,191 @@
+{
+  "name": "oem-event-router-v3",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "oem-event-router-v3",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -1088,
+        -640
+      ],
+      "id": "aac2a7fb-a0c0-476e-95e9-35ae2ff8071c",
+      "name": "Webhook",
+      "webhookId": "30386f3f-234a-4404-9f27-a755f71f84ca"
+    },
+    {
+      "parameters": {
+        "jsCode": "const tenantId = $input.first().json.body.tenant_id;\nconst eventType = $input.first().json.body.event_type;\nconst payload = $input.first().json.body.payload;\n\nconst configs = {\n  tenant_a: {\n    tenant_id: \"tenant_a\",\n    name: \"E-commerce SMB\",\n    error_mode: \"continue\",\n    data_handling: \"standard\",\n    email: {\n      enabled: true,\n      from_name: \"TenantA Store\",\n      templates: {\n        cart_abandoned: \"tmpl_001\",\n        new_order: \"tmpl_002\",\n        refund_requested: \"tmpl_003\"\n      }\n    },\n    sheet_log: {\n      enabled: true,\n      sheet_id: \"sheet_tenant_a\"\n    },\n    slack: {\n      enabled: false\n    },\n    crm: {\n      enabled: false\n    },\n    audit: {\n      enabled: false\n    }\n  },\n  tenant_b: {\n    tenant_id: \"tenant_b\",\n    name: \"B2B SaaS\",\n    error_mode: \"block\",\n    data_handling: \"standard\",\n    email: {\n      enabled: true,\n      from_name: \"TenantB\",\n      templates: {\n        trial_signup: \"tmpl_010\",\n        upgrade: \"tmpl_011\",\n        churn_signal: \"tmpl_012\"\n      }\n    },\n    sheet_log: {\n      enabled: false\n    },\n    slack: {\n      enabled: true,\n      channel: \"#new-trials\"\n    },\n    crm: {\n      enabled: true,\n      record_type: \"Lead\"\n    },\n    audit: {\n      enabled: false\n    }\n  },\n  tenant_c: {\n    tenant_id: \"tenant_c\",\n    name: \"Healthcare Provider\",\n    error_mode: \"block\",\n    data_handling: \"pii_masked\",\n    email: {\n      enabled: true,\n      from_name: \"HealthcareCo\",\n      templates: {\n        appointment_reminder: \"tmpl_020\",\n        intake_completed: \"tmpl_021\"\n      }\n    },\n    sheet_log: {\n      enabled: false\n    },\n    slack: {\n      enabled: false\n    },\n    crm: {\n      enabled: false\n    },\n    audit: {\n      enabled: true\n    }\n  }\n};\n\nconst config = configs[tenantId];\n\nif (!config) {\n  throw new Error(`Unknown tenant_id: ${tenantId}`);\n}\n\nreturn [{\n  json: {\n    tenant_config: config,\n    event_type: eventType,\n    payload: payload\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -864,
+        -640
+      ],
+      "id": "32d9363a-6158-421f-8c99-a8556fe010e5",
+      "name": "Tenant Config Lookup"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=This is a request from tenant {{ $json.tenant_config.name }}, the type of event generating this request is {{ $json.event_type }}.\n\nFor this request, the following services are needed: {{ [$json.tenant_config.data_handling === 'pii_masked' ? 'PII Masker Service (run this first before anything else)' : '', $json.tenant_config.email.enabled ? 'Email Service' : '', $json.tenant_config.crm.enabled ? 'CRM Service' : ''].filter(s => s !== '').join(', ') }}.\n\nIf PII Masker Service is listed, call PII Masker Service first and pass its returned payload to all subsequent service tools.\n\nPlease use the below data to complete the request using the available tools.\n\nTenant config: {{ JSON.stringify($json.tenant_config) }}\nEvent type: {{ $json.event_type }}\nPayload: {{ JSON.stringify($json.payload) }}\n\nAfter calling all required tools, return only this JSON and nothing else:\n{\n  \"tenant_id\": \"{{ $json.tenant_config.tenant_id }}\",\n  \"event_type\": \"{{ $json.event_type }}\",\n  \"services_called\": [],\n  \"status\": \"completed\"\n}\nFill services_called with the names of the tools you called.\n",
+        "options": {
+          "systemMessage": "You are a service orchestrator for a multi-tenant platform. You receive tenant requests that specify which services are needed. For each service listed in the request, call the corresponding tool using the tenant_config, event_type and payload provided. Call all listed services in the order listed. After calling all tools, return only a JSON object with the results. Do not explain. Do not narrate."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        -640,
+        -640
+      ],
+      "id": "71cd373e-95a7-45f5-8bcd-31db0311c6ed",
+      "name": "AI Agent",
+      "alwaysOutputData": false
+    },
+    {
+      "parameters": {
+        "endpointUrl": "http://localhost:5678/mcp/65ae3f3a-a7a3-41c9-bfce-63e7a005da11",
+        "include": "selected",
+        "includeTools": [
+          "Email_Service",
+          "CRM_Service",
+          "PII_Masker_Service"
+        ],
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.mcpClientTool",
+      "typeVersion": 1.2,
+      "position": [
+        -496,
+        -416
+      ],
+      "id": "2536c179-9a43-4d4e-8d4d-cc4fcdf55337",
+      "name": "MCP Client"
+    },
+    {
+      "parameters": {
+        "model": "mistral-nemo:latest",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOllama",
+      "typeVersion": 1,
+      "position": [
+        -640,
+        -416
+      ],
+      "id": "5d79ee1b-131a-4c84-ab0e-3d96536fa4a4",
+      "name": "Ollama Chat Model",
+      "credentials": {
+        "ollamaApi": {
+          "id": "CuMnArRKI9Cw1cc1",
+          "name": "Ollama account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "\n\n### TENANT A — E-commerce SMB\n### New Order (email only)\ncurl -X POST http://localhost:5678/webhook-test/oem-event-router-v3 \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"tenant_id\":\"tenant_a\",\"event_type\":\"new_order\",\"payload\":{\"customer_email\":\"anna@shop.com\",\"cart_value\":120.00}}'\n\n###  Cart Abandoned (email only)\ncurl -X POST http://localhost:5678/webhook-test/oem-event-router-v3 \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"tenant_id\":\"tenant_a\",\"event_type\":\"cart_abandoned\",\"payload\":{\"customer_email\":\"anna@shop.com\",\"cart_value\":89.99}}'\n\n###  Refund Requested (email only)\ncurl -X POST http://localhost:5678/webhook-test/oem-event-router-v3 \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"tenant_id\":\"tenant_a\",\"event_type\":\"refund_requested\",\"payload\":{\"customer_email\":\"anna@shop.com\",\"cart_value\":45.00}}'\n\n### TENANT B — B2B SaaS\n### Trial Signup (email + CRM)\ncurl -X POST http://localhost:5678/webhook-test/oem-event-router-v3 \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"tenant_id\":\"tenant_b\",\"event_type\":\"trial_signup\",\"payload\":{\"customer_email\":\"john@acme.com\",\"company\":\"Acme Corp\",\"plan\":\"trial\"}}'\n\n### Upgrade (email + CRM)\ncurl -X POST http://localhost:5678/webhook-test/oem-event-router-v3 \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"tenant_id\":\"tenant_b\",\"event_type\":\"upgrade\",\"payload\":{\"customer_email\":\"john@acme.com\",\"company\":\"Acme Corp\",\"plan\":\"pro\"}}'\n\n### Churn Signal (email + CRM)\ncurl -X POST http://localhost:5678/webhook-test/oem-event-router-v3 \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"tenant_id\":\"tenant_b\",\"event_type\":\"churn_signal\",\"payload\":{\"customer_email\":\"john@acme.com\",\"company\":\"Acme Corp\",\"usage_drop\":\"78%\"}}'\n\n### TENANT C — Healthcare Provider (PII masking + email)\n###  Appointment Reminder — includes PII fields to verify masking\ncurl -X POST http://localhost:5678/webhook-test/oem-event-router-v3 \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"tenant_id\":\"tenant_c\",\"event_type\":\"appointment_reminder\",\"payload\":{\"customer_email\":\"patient@clinic.com\",\"patient_name\":\"Jane Smith\",\"dob\":\"1985-03-22\",\"phone\":\"555-0100\"}}'\n\n###  Intake Completed — includes PII fields to verify masking\ncurl -X POST http://localhost:5678/webhook-test/oem-event-router-v3 \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"tenant_id\":\"tenant_c\",\"event_type\":\"intake_completed\",\"payload\":{\"customer_email\":\"patient@clinic.com\",\"patient_name\":\"John Doe\",\"dob\":\"1990-07-15\",\"phone\":\"555-0200\"}}'",
+        "height": 880,
+        "width": 1296
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -1264,
+        -256
+      ],
+      "typeVersion": 1,
+      "id": "1ca2bfa1-66b4-4115-9c10-7fbe8f27ec4d",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "jsCode": "const parsed = JSON.parse($input.first().json.output);\nconst tenantConfig = $('Tenant Config Lookup').first().json.tenant_config;\nconst payload = $('Tenant Config Lookup').first().json.payload;\n\nreturn [{\n  json: {\n    ...parsed,\n    pii_required: tenantConfig.data_handling === 'pii_masked',\n    original_payload: payload\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -256,
+        -640
+      ],
+      "id": "e3442297-6589-4d42-828d-0fac3f160415",
+      "name": "Code in JavaScript"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Tenant Config Lookup",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tenant Config Lookup": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "MCP Client": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ollama Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "8430e6e2-8f8c-455b-a978-6c2b963e9a7d",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "962a59ff95176050f9f591a7c2ac89974c0465bcc126735b72f2c213fa955d44"
+  },
+  "id": "mNK7boZpHLe6eFj1",
+  "tags": []
+}

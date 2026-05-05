@@ -1,0 +1,252 @@
+{
+  "name": "oem-mcp-server",
+  "nodes": [
+    {
+      "parameters": {
+        "path": "65ae3f3a-a7a3-41c9-bfce-63e7a005da11"
+      },
+      "type": "@n8n/n8n-nodes-langchain.mcpTrigger",
+      "typeVersion": 2,
+      "position": [
+        -720,
+        -272
+      ],
+      "id": "910fd0ab-0c15-4ac6-a0f6-7997448f6a35",
+      "name": "MCP Server Trigger",
+      "webhookId": "65ae3f3a-a7a3-41c9-bfce-63e7a005da11",
+      "alwaysOutputData": true,
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "description": "Email Service Tool\n\nThis tool sends an email upon tenant request. Use this tool when tenants request to send an email.",
+        "workflowId": {
+          "__rl": true,
+          "value": "ohqKSIC1aGGMO3Uu",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/ohqKSIC1aGGMO3Uu",
+          "cachedResultName": "oem-action-email"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "tenant_config": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('tenant_config', `The full tenant configuration object passed in the request.`, 'json') }}",
+            "event_type": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('event_type', `The event type string. Pass this as a separate field, not inside the payload object.`, 'string') }}",
+            "payload": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('payload', `Customer data object only. Do not include event_type inside this object.`, 'json') }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "tenant_config",
+              "displayName": "tenant_config",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "object",
+              "removed": false
+            },
+            {
+              "id": "event_type",
+              "displayName": "event_type",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "payload",
+              "displayName": "payload",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "object",
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 2.2,
+      "position": [
+        -816,
+        0
+      ],
+      "id": "84802635-ea8f-49ac-842f-96c1d26082df",
+      "name": "Email Service"
+    },
+    {
+      "parameters": {
+        "description": "CRM Service Tool\n\nThis tool writes a CRM record upon tenant request. Use this tool when tenants request CRM record creation.\n",
+        "workflowId": {
+          "__rl": true,
+          "value": "pE8H7TlNUfkCxD1L",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/pE8H7TlNUfkCxD1L",
+          "cachedResultName": "oem-action-crm"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "tenant_config": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('tenant_config', `The full tenant configuration object passed in the request.`, 'json') }}",
+            "event_type": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('event_type', `The event type string. Pass this as a separate field, not inside the payload object.`, 'string') }}",
+            "payload": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('payload', `Customer data object only. If PII Masker Service was called first, use the masked payload returned by PII Masker Service.`, 'json') }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "tenant_config",
+              "displayName": "tenant_config",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "object"
+            },
+            {
+              "id": "event_type",
+              "displayName": "event_type",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "payload",
+              "displayName": "payload",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "object"
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 2.2,
+      "position": [
+        -640,
+        0
+      ],
+      "id": "29957fdc-255b-4062-b110-6ebf27ea5348",
+      "name": "CRM Service"
+    },
+    {
+      "parameters": {
+        "description": "PII Masker Service Tool\n\nThis tool masks personally identifiable information in the payload. Use this tool before any other tool when the tenant requires PII masking.",
+        "workflowId": {
+          "__rl": true,
+          "value": "QOvajTHHHhlzy7Oi",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/QOvajTHHHhlzy7Oi",
+          "cachedResultName": "oem-action-pii-masker"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "tenant_config": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('tenant_config', `The full tenant configuration object passed in the request.`, 'json') }}",
+            "event_type": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('event_type', ``, 'string') }}",
+            "payload": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('payload', `Customer data object containing fields to be masked. Pass the original payload from the request.`, 'json') }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "tenant_config",
+              "displayName": "tenant_config",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "object"
+            },
+            {
+              "id": "event_type",
+              "displayName": "event_type",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "payload",
+              "displayName": "payload",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "object"
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 2.2,
+      "position": [
+        -464,
+        0
+      ],
+      "id": "5593980a-ef29-42d9-bc7e-047de831de5d",
+      "name": "PII Masker Service"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Email Service": {
+      "ai_tool": [
+        [
+          {
+            "node": "MCP Server Trigger",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CRM Service": {
+      "ai_tool": [
+        [
+          {
+            "node": "MCP Server Trigger",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "PII Masker Service": {
+      "ai_tool": [
+        [
+          {
+            "node": "MCP Server Trigger",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "c44ae793-5297-4f86-a635-afee0cbb4d45",
+  "meta": {
+    "instanceId": "962a59ff95176050f9f591a7c2ac89974c0465bcc126735b72f2c213fa955d44"
+  },
+  "id": "9VYqUAsLe4w2tYsj",
+  "tags": []
+}
