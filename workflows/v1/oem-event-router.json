@@ -1,5 +1,5 @@
 {
-  "name": "MultiTenant",
+  "name": "oem-event-router",
   "nodes": [
     {
       "parameters": {
@@ -10,8 +10,8 @@
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2.1,
       "position": [
-        -736,
-        -320
+        -512,
+        -112
       ],
       "id": "9ed49cce-f093-411c-bfa1-a4e588cf0d7a",
       "name": "Webhook",
@@ -24,7 +24,7 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -240,
+        -272,
         -112
       ],
       "id": "1bb4e662-9249-4994-9f80-62984d8227b1",
@@ -201,17 +201,6 @@
       ],
       "id": "8c1da926-b183-45ab-be8a-b4bead0230a4",
       "name": "Gate: Email"
-    },
-    {
-      "parameters": {},
-      "type": "n8n-nodes-base.manualTrigger",
-      "typeVersion": 1,
-      "position": [
-        -720,
-        -112
-      ],
-      "id": "1d855e39-6907-43c2-9d00-7a16165be398",
-      "name": "When clicking ‘Execute workflow’"
     },
     {
       "parameters": {
@@ -531,27 +520,14 @@
     },
     {
       "parameters": {
-        "jsCode": "return [{\n  json: {\n    body: {\n      tenant_id: \"tenant_b\",\n      event_type: \"trial_signup\",\n      payload: {\n        customer_email: \"john.doe@example.com\",\n        company: \"Acme Corp\",\n        plan: \"trial\"\n      }\n    }\n  }\n}];"
-      },
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        -496,
-        -112
-      ],
-      "id": "67442783-330f-4a4f-a301-6bada60a0107",
-      "name": "Mock Payload"
-    },
-    {
-      "parameters": {
-        "content": "## MOCK PAYLOADS\nCopy into Mock Payload Code node\n\n──────────────────────────────────\nTENANT A — E-commerce SMB\n──────────────────────────────────\nCart Abandoned:\n{ body: { tenant_id: \"tenant_a\", event_type: \"cart_abandoned\",\npayload: { customer_email: \"anna@shop.com\", cart_value: 89.99 }}}\n\nNew Order:\n{ body: { tenant_id: \"tenant_a\", event_type: \"new_order\",\npayload: { customer_email: \"anna@shop.com\", cart_value: 120.00 }}}\n\nRefund Requested:\n{ body: { tenant_id: \"tenant_a\", event_type: \"refund_requested\",\npayload: { customer_email: \"anna@shop.com\", cart_value: 45.00 }}}\n\n──────────────────────────────────\nTENANT B — B2B SaaS\n──────────────────────────────────\nTrial Signup:\n{ body: { tenant_id: \"tenant_b\", event_type: \"trial_signup\",\npayload: { customer_email: \"john@acme.com\", company: \"Acme Corp\", plan: \"trial\" }}}\n\nUpgrade:\n{ body: { tenant_id: \"tenant_b\", event_type: \"upgrade\",\npayload: { customer_email: \"john@acme.com\", company: \"Acme Corp\", plan: \"pro\" }}}\n\nChurn Signal:\n{ body: { tenant_id: \"tenant_b\", event_type: \"churn_signal\",\npayload: { customer_email: \"john@acme.com\", company: \"Acme Corp\", usage_drop: \"78%\" }}}\n\n──────────────────────────────────\nTENANT C — Healthcare Provider\n──────────────────────────────────\nAppointment Reminder:\n{ body: { tenant_id: \"tenant_c\", event_type: \"appointment_reminder\",\npayload: { customer_email: \"patient@clinic.com\", patient_name: \"Jane Smith\", dob: \"1985-03-22\" }}}\n\nIntake Completed:\n{ body: { tenant_id: \"tenant_c\", event_type: \"intake_completed\",\npayload: { customer_email: \"patient@clinic.com\", patient_name: \"Jane Smith\", phone: \"555-0100\" }}}",
-        "height": 880,
-        "width": 768
+        "content": "## TENANT A — E-commerce SMB\n### New Order\ncurl -X POST http://localhost:5678/webhook/oem-event-router \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"tenant_id\":\"tenant_a\",\"event_type\":\"new_order\",\"payload\":{\"customer_email\":\"anna@shop.com\",\"cart_value\":120.00}}'\n\n### Cart Abandoned\ncurl -X POST http://localhost:5678/webhook/oem-event-router \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"tenant_id\":\"tenant_a\",\"event_type\":\"cart_abandoned\",\"payload\":{\"customer_email\":\"anna@shop.com\",\"cart_value\":89.99}}'\n\n### Refund Requested\ncurl -X POST http://localhost:5678/webhook/oem-event-router \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"tenant_id\":\"tenant_a\",\"event_type\":\"refund_requested\",\"payload\":{\"customer_email\":\"anna@shop.com\",\"cart_value\":45.00}}'\n\n## TENANT B — B2B SaaS\n### Trial Signup\ncurl -X POST http://localhost:5678/webhook/oem-event-router \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"tenant_id\":\"tenant_b\",\"event_type\":\"trial_signup\",\"payload\":{\"customer_email\":\"john@acme.com\",\"company\":\"Acme Corp\",\"plan\":\"trial\"}}'\n\n### Upgrade\ncurl -X POST http://localhost:5678/webhook/oem-event-router \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"tenant_id\":\"tenant_b\",\"event_type\":\"upgrade\",\"payload\":{\"customer_email\":\"john@acme.com\",\"company\":\"Acme Corp\",\"plan\":\"pro\"}}'\n\n### Churn Signal\ncurl -X POST http://localhost:5678/webhook/oem-event-router \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"tenant_id\":\"tenant_b\",\"event_type\":\"churn_signal\",\"payload\":{\"customer_email\":\"john@acme.com\",\"company\":\"Acme Corp\",\"usage_drop\":\"78%\"}}'\n\n## TENANT C — Healthcare Provider (triggers PII masking)\n### Appointment Reminder\ncurl -X POST http://localhost:5678/webhook/oem-event-router \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"tenant_id\":\"tenant_c\",\"event_type\":\"appointment_reminder\",\"payload\":{\"customer_email\":\"patient@clinic.com\",\"patient_name\":\"Jane Smith\",\"dob\":\"1985-03-22\",\"phone\":\"555-0100\"}}'\n\n### Intake Completed\ncurl -X POST http://localhost:5678/webhook/oem-event-router \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"tenant_id\":\"tenant_c\",\"event_type\":\"intake_completed\",\"payload\":{\"customer_email\":\"patient@clinic.com\",\"patient_name\":\"John Doe\",\"dob\":\"1990-07-15\",\"phone\":\"555-0200\"}}'",
+        "height": 1072,
+        "width": 1408
       },
       "type": "n8n-nodes-base.stickyNote",
       "position": [
-        -736,
-        128
+        0,
+        528
       ],
       "typeVersion": 1,
       "id": "323707a9-e7ca-4864-8d4e-f5692d68c0f5",
@@ -562,7 +538,13 @@
   "connections": {
     "Webhook": {
       "main": [
-        []
+        [
+          {
+            "node": "Tenant Config Lookup",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Tenant Config Lookup": {
@@ -621,17 +603,6 @@
         [
           {
             "node": "Gate: Email",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "When clicking ‘Execute workflow’": {
-      "main": [
-        [
-          {
-            "node": "Mock Payload",
             "type": "main",
             "index": 0
           }
@@ -750,25 +721,15 @@
           }
         ]
       ]
-    },
-    "Mock Payload": {
-      "main": [
-        [
-          {
-            "node": "Tenant Config Lookup",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
     }
   },
-  "active": false,
+  "active": true,
   "settings": {
     "executionOrder": "v1",
+    "binaryMode": "separate",
     "availableInMCP": false
   },
-  "versionId": "2e45633c-ec4a-443e-aa6c-13f4b5f954b9",
+  "versionId": "640f6261-0612-4b5c-b302-d0562da3e56a",
   "meta": {
     "instanceId": "962a59ff95176050f9f591a7c2ac89974c0465bcc126735b72f2c213fa955d44"
   },

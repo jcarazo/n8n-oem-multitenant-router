@@ -96,8 +96,8 @@
       },
       "type": "n8n-nodes-base.stickyNote",
       "position": [
-        -1264,
-        -256
+        -1168,
+        -160
       ],
       "typeVersion": 1,
       "id": "1ca2bfa1-66b4-4115-9c10-7fbe8f27ec4d",
@@ -114,7 +114,7 @@
         -640
       ],
       "id": "e3442297-6589-4d42-828d-0fac3f160415",
-      "name": "Code in JavaScript"
+      "name": "Show Results"
     }
   ],
   "pinData": {},
@@ -167,7 +167,7 @@
       "main": [
         [
           {
-            "node": "Code in JavaScript",
+            "node": "Show Results",
             "type": "main",
             "index": 0
           }
@@ -181,7 +181,7 @@
     "binaryMode": "separate",
     "availableInMCP": false
   },
-  "versionId": "8430e6e2-8f8c-455b-a978-6c2b963e9a7d",
+  "versionId": "7a8717f4-09db-46a6-90a4-c2d4e50202cf",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "962a59ff95176050f9f591a7c2ac89974c0465bcc126735b72f2c213fa955d44"

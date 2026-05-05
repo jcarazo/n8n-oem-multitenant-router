@@ -4,14 +4,14 @@
     {
       "parameters": {
         "httpMethod": "POST",
-        "path": "97e2ffda-98f6-4129-927a-0957ee0bedcc",
+        "path": "oem-event-router-v2",
         "options": {}
       },
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2.1,
       "position": [
-        -736,
-        -320
+        -464,
+        -112
       ],
       "id": "2b74d0f1-2725-4698-a1dc-8388b0e91b90",
       "name": "Webhook",
@@ -129,39 +129,15 @@
       "name": "PII Merge"
     },
     {
-      "parameters": {},
-      "type": "n8n-nodes-base.manualTrigger",
-      "typeVersion": 1,
-      "position": [
-        -720,
-        -112
-      ],
-      "id": "5104e44c-5f8a-4cf8-aea6-3140fcc9d320",
-      "name": "When clicking ‘Execute workflow’"
-    },
-    {
       "parameters": {
-        "jsCode": "return [{\n  json: {\n    body: {\n      tenant_id: \"tenant_b\",\n      event_type: \"trial_signup\",\n      payload: {\n        customer_email: \"john@acme.com\",\n        company: \"Acme Corp\",\n        plan: \"trial\"\n      }\n    }\n  }\n}];"
-      },
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        -496,
-        -112
-      ],
-      "id": "15da38ff-3b68-450a-b6a0-d7afd049d7b5",
-      "name": "Mock Payload"
-    },
-    {
-      "parameters": {
-        "content": "## MOCK PAYLOADS\nCopy into Mock Payload Code node\n\n──────────────────────────────────\nTENANT A — E-commerce SMB\n──────────────────────────────────\nCart Abandoned:\n{ body: { tenant_id: \"tenant_a\", event_type: \"cart_abandoned\",\npayload: { customer_email: \"anna@shop.com\", cart_value: 89.99 }}}\n\nNew Order:\n{ body: { tenant_id: \"tenant_a\", event_type: \"new_order\",\npayload: { customer_email: \"anna@shop.com\", cart_value: 120.00 }}}\n\nRefund Requested:\n{ body: { tenant_id: \"tenant_a\", event_type: \"refund_requested\",\npayload: { customer_email: \"anna@shop.com\", cart_value: 45.00 }}}\n\n──────────────────────────────────\nTENANT B — B2B SaaS\n──────────────────────────────────\nTrial Signup:\n{ body: { tenant_id: \"tenant_b\", event_type: \"trial_signup\",\npayload: { customer_email: \"john@acme.com\", company: \"Acme Corp\", plan: \"trial\" }}}\n\nUpgrade:\n{ body: { tenant_id: \"tenant_b\", event_type: \"upgrade\",\npayload: { customer_email: \"john@acme.com\", company: \"Acme Corp\", plan: \"pro\" }}}\n\nChurn Signal:\n{ body: { tenant_id: \"tenant_b\", event_type: \"churn_signal\",\npayload: { customer_email: \"john@acme.com\", company: \"Acme Corp\", usage_drop: \"78%\" }}}\n\n──────────────────────────────────\nTENANT C — Healthcare Provider\n──────────────────────────────────\nAppointment Reminder:\n{ body: { tenant_id: \"tenant_c\", event_type: \"appointment_reminder\",\npayload: { customer_email: \"patient@clinic.com\", patient_name: \"Jane Smith\", dob: \"1985-03-22\" }}}\n\nIntake Completed:\n{ body: { tenant_id: \"tenant_c\", event_type: \"intake_completed\",\npayload: { customer_email: \"patient@clinic.com\", patient_name: \"Jane Smith\", phone: \"555-0100\" }}}",
-        "height": 880,
+        "content": "## TENANT A — E-commerce SMB\n\n### New Order\ncurl -X POST http://localhost:5678/webhook/oem-event-router-v2 \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"tenant_id\":\"tenant_a\",\"event_type\":\"new_order\",\"payload\":{\"customer_email\":\"anna@shop.com\",\"cart_value\":120.00}}'\n\n### Cart Abandoned\ncurl -X POST http://localhost:5678/webhook/oem-event-router-v2 \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"tenant_id\":\"tenant_a\",\"event_type\":\"cart_abandoned\",\"payload\":{\"customer_email\":\"anna@shop.com\",\"cart_value\":89.99}}'\n\n### Refund Requested\ncurl -X POST http://localhost:5678/webhook/oem-event-router-v2 \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"tenant_id\":\"tenant_a\",\"event_type\":\"refund_requested\",\"payload\":{\"customer_email\":\"anna@shop.com\",\"cart_value\":45.00}}'\n\n## TENANT B — B2B SaaS\n\n### Trial Signup\ncurl -X POST http://localhost:5678/webhook/oem-event-router-v2 \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"tenant_id\":\"tenant_b\",\"event_type\":\"trial_signup\",\"payload\":{\"customer_email\":\"john@acme.com\",\"company\":\"Acme Corp\",\"plan\":\"trial\"}}'\n\n### Upgrade\ncurl -X POST http://localhost:5678/webhook/oem-event-router-v2 \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"tenant_id\":\"tenant_b\",\"event_type\":\"upgrade\",\"payload\":{\"customer_email\":\"john@acme.com\",\"company\":\"Acme Corp\",\"plan\":\"pro\"}}'\n\n### Churn Signal\ncurl -X POST http://localhost:5678/webhook/oem-event-router-v2 \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"tenant_id\":\"tenant_b\",\"event_type\":\"churn_signal\",\"payload\":{\"customer_email\":\"john@acme.com\",\"company\":\"Acme Corp\",\"usage_drop\":\"78%\"}}'\n\n## TENANT C — Healthcare Provider (triggers PII masking)\n\n### Appointment Reminder\ncurl -X POST http://localhost:5678/webhook/oem-event-router-v2 \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"tenant_id\":\"tenant_c\",\"event_type\":\"appointment_reminder\",\"payload\":{\"customer_email\":\"patient@clinic.com\",\"patient_name\":\"Jane Smith\",\"dob\":\"1985-03-22\",\"phone\":\"555-",
+        "height": 976,
         "width": 768
       },
       "type": "n8n-nodes-base.stickyNote",
       "position": [
-        -736,
-        128
+        -112,
+        256
       ],
       "typeVersion": 1,
       "id": "472847a5-8d4b-4251-bd61-bbc66907a0dd",
@@ -285,7 +261,13 @@
   "connections": {
     "Webhook": {
       "main": [
-        []
+        [
+          {
+            "node": "Tenant Config Lookup",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Tenant Config Lookup": {
@@ -350,28 +332,6 @@
         ]
       ]
     },
-    "When clicking ‘Execute workflow’": {
-      "main": [
-        [
-          {
-            "node": "Mock Payload",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Mock Payload": {
-      "main": [
-        [
-          {
-            "node": "Tenant Config Lookup",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
     "Define Services": {
       "main": [
         [
@@ -413,12 +373,13 @@
       ]
     }
   },
-  "active": false,
+  "active": true,
   "settings": {
     "executionOrder": "v1",
+    "binaryMode": "separate",
     "availableInMCP": false
   },
-  "versionId": "19dca389-4737-4fa6-b2a0-dcf563d035d7",
+  "versionId": "076212bd-605c-4a90-8f75-b56f2ed9ce64",
   "meta": {
     "instanceId": "962a59ff95176050f9f591a7c2ac89974c0465bcc126735b72f2c213fa955d44"
   },
