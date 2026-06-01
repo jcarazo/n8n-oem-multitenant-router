@@ -1,7 +1,12 @@
 ## n8n OEM Multi-Tenant Event Router
 
-An architecture example showing how an OEM platform can use n8n to deliver 
-configurable automation services to multiple tenants from a single workflow instance.
+This project documents a learning journey through progressively more sophisticated 
+multi-tenant workflow orchestration patterns. Starting from a simple linear service 
+chain and evolving through loop-based orchestration to AI agent dispatch via MCP, 
+each version represents an architectural decision: what breaks at scale, 
+why it breaks, and how the next iteration addresses it. The goal is not a production 
+system, it is a structured exploration of how platform thinking evolves when you move 
+from "make it work" to "make it scale to N tenants without touching the core workflow."
 
 > **Note:** This is a demonstration of architectural patterns, not a 
 > production-ready implementation. Authentication, error handling, retry 
@@ -49,7 +54,6 @@ correct order — including chaining PII masking before downstream services.
 ![v3 workflow](docs/images/v3-workflow.png)
 
 → [v3 details](workflows/v3/)
-
 
 ## Author
 
